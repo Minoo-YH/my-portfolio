@@ -1,29 +1,40 @@
-// index.js
-
+const nodemailer = require('nodemailer');
 const express = require('express');
-const mongoose = require('mongoose');
-const cors = require('cors');
-const dotenv = require('dotenv');
-
+const bodyParser = require('body-parser');
+import dotenv from 'dotenv';
 dotenv.config();
+
+
 const app = express();
+app.use(bodyParser.json());
 
-// Middleware
-app.use(cors()); // Enable CORS for all routes
-app.use(express.json()); // Parse JSON requests
-
-// Connect to MongoDB
-mongoose.connect(process.env.MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true })
-  .then(() => console.log("MongoDB Connected"))
-  .catch(err => console.log(err));
-
-// Simple route for testing
-app.get('/', (req, res) => {
-  res.send('Backend for Portfolio is running');
+const transporter = nodemailer.createTransport({
+  service: 'gmail',
+  auth: {
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS,
+  },
 });
 
-// Start the server
+app.post('/send', async (req, res) => {
+  const { name, email, message } = req.body;
+
+  const mailOptions = {
+    from: process.env.EMAIL_USER,
+    to: process.env.EMAIL_USER,
+    subject: `New Contact Message from ${name}`,
+    text: `Name: ${name}\nEmail: ${email}\nMessage: ${message}`,
+  };
+
+  try {
+    await transporter.sendMail(mailOptions);
+    res.status(200).json({ message: 'Email sent successfully!' });
+  } catch (error) {
+    console.error('Error sending email:', error);
+    res.status(500).json({ error: 'Failed to send email' });
+  }
+});
+
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+
